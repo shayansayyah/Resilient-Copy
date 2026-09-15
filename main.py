@@ -1,11 +1,10 @@
-import subprocess
 from pathlib import Path
 from dotenv import load_dotenv
 import os
 
 load_dotenv()
 
-sou = Path(os.getenv("PATH")) #Path(input("path: ").strip())
+sou = Path(os.getenv("PATH"))
 dest = Path(os.getenv("DEST"))
 
 FILTER_CHARS = '*?'
@@ -46,7 +45,6 @@ def copy(source:Path, desti:Path, wildcard:str, indexes:list):
     i, l = destination(source, desti, wildcard, -1, indexes)
     glob = [*source.glob(wildcard)]
     for index, directory in enumerate(glob):
-        # print(f"{index + 1}: {desti / directory}")
         f = Path(desti / directory.parts[indexes[i]])
         j = len(directory.parts) - 1
         if j != indexes[i]:
