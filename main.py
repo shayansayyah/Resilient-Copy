@@ -4,65 +4,66 @@ import os
 
 load_dotenv()
 
-sou = Path(os.getenv("PATH"))
-dest = Path(os.getenv("DEST"))
+source = Path(os.getenv("PATH"))
+destination = Path(os.getenv("DEST"))
 
 FILTER_CHARS = '*?'
 
-def is_filtered(path:Path) -> bool:
-    return any(char in str(path) for char in FILTER_CHARS)
+def is_filtered(full_source:Path) -> bool:
+    return any(char in str(full_source) for char in FILTER_CHARS)
 
-
-def find_filter_index(path:Path) -> int:
+def find_wildcard_indexes(full_source:Path) -> int:
     indexes = set()
-    for index, part in enumerate(path.parts):
+    for index, part in enumerate(full_source.parts):
         for char in part:
             if char in FILTER_CHARS:
                 indexes.add(index)
     return sorted(indexes)
 
-def costant_path(path:Path, index:int) -> Path:
-    parent = Path("\\".join(path.parts[:index]))
+def costant_path(full_source:Path, index:int) -> Path:
+    parent = Path("\\".join(full_source.parts[:index]))
     return parent
 
-def wildcard(path:Path, first:int, last:int) -> str:
-    wildcard = "\\".join(path.parts[first:last])
+def wildcards(full_source:Path, first:int, last:int) -> str:
+    wildcard = "\\".join(full_source.parts[first:last])
     return wildcard
 
-def destination(source:Path, desti:Path, wild:str, i:int, indexes:list):
-    l = [Path(directory.parts[indexes[i]]) for directory in source.glob(wild) if directory.is_dir()]
-    s = [l.count(Path(directory.parts[indexes[i]])) == 1 for directory in source.glob(wild) if directory.is_dir()]
-    p = all(s)
+def path_float_segment(fixed_source:Path, wildcard:str, w_indexes:list, w_index:int):
     
-    if p:
-        return i, l
-    
-    w = wildcard(sou, indexes[0], indexes[i])
-    i = i -1
-    return destination(source, desti, w, i, indexes)
+    float_path = [Path(directory.parts[w_indexes[w_index]])
+            for directory in fixed_source.glob(wildcard)
+            if directory.is_dir()]
 
-def copy(source:Path, desti:Path, wildcard:str, indexes:list):
-    i, l = destination(source, desti, wildcard, -1, indexes)
-    glob = [*source.glob(wildcard)]
+    if len(float_path) == len(set(float_path)):
+        return w_index
+    
+    wildcard = wildcards(source, w_indexes[0], w_indexes[w_index])
+    w_index -= 1
+    
+    return path_float_segment(fixed_source, wildcard, w_indexes, w_index)
+
+def copy(fixed_source:Path, fixed_dest:Path, wildcard:str, w_indexes:list):
+    w_index = path_float_segment(fixed_source, wildcard, w_indexes, -1)
+    glob = [*fixed_source.glob(wildcard)]
     for index, directory in enumerate(glob):
-        f = Path(desti / directory.parts[indexes[i]])
+        f = Path(fixed_dest / directory.parts[w_indexes[w_index]])
         j = len(directory.parts) - 1
-        if j != indexes[i]:
-            f = Path(desti / directory.parts[indexes[i]]) / directory.name
+        if j != w_indexes[w_index]:
+            f = Path(fixed_dest / directory.parts[w_indexes[w_index]]) / directory.name
         
         print(f"{index}: {directory}    --->    {f}")
 
 def main():
 
-    if is_filtered(sou):
-        filter_indexes = find_filter_index(sou)
-        const_path = costant_path(sou, filter_indexes[0])
-        last = filter_indexes[-1] + 1
+    if is_filtered(source):
+        wildcard_indexes = find_wildcard_indexes(source)
+        const_path = costant_path(source, wildcard_indexes[0])
+        last = wildcard_indexes[-1] + 1
 
-        if filter_indexes[0] == filter_indexes[-1]:
-            last = len(sou.parts)
-        w_card = wildcard(sou, filter_indexes[0], last)
-        copy(const_path, dest, w_card, filter_indexes)
+        if wildcard_indexes[0] == wildcard_indexes[-1]:
+            last = len(source.parts)
+        wildcard = wildcards(source, wildcard_indexes[0], last)
+        copy(const_path, destination, wildcard, wildcard_indexes)
 
 if __name__ == '__main__':
     main()
