@@ -39,7 +39,7 @@ If the source path does not contain wildcard characters, the script performs a s
 1. Clone the repository:
 
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/shayansayyah/Resilient-Copy.git
    cd Resilient-Copy
    ```
 
