@@ -20,43 +20,47 @@ def find_wildcard_indexes(full_source:Path) -> int:
                 indexes.add(index)
     return sorted(indexes)
 
-def costant_path(full_source:Path, index:int) -> Path:
-    parent = Path("\\".join(full_source.parts[:index]))
+def costant_path(full_source:Path, first_w_index:int) -> Path:
+    parent = Path("\\".join(full_source.parts[:first_w_index]))
     return parent
 
-def wildcards(full_source:Path, first:int, last:int) -> str:
-    wildcard = "\\".join(full_source.parts[first:last])
+def wildcards(full_source:Path, first_w_index:int, last_w_index:int) -> str:
+    wildcard = "\\".join(full_source.parts[first_w_index : last_w_index])
     return wildcard
 
-def path_float_segment(fixed_source:Path, wildcard:str, w_indexes:list, w_index:int):
-    
-    float_path = [Path(directory.parts[w_indexes[w_index]])
-            for directory in fixed_source.glob(wildcard)
-            if directory.is_dir()]
+def path_float_segment(fixed_source:Path, wildcard:str, w_indexes:list):
+    w_index = -1
+    while True:
+        float_path = [Path(match.parts[w_indexes[w_index]])
+                        for match in fixed_source.glob(wildcard)
+                        ]
 
-    if len(float_path) == len(set(float_path)):
-        return w_index
+        if len(float_path) == len(set(float_path)):
+            return w_index
+        
+        wildcard = wildcards(source, w_indexes[0], w_indexes[w_index])
+        w_index -= 1
     
-    wildcard = wildcards(source, w_indexes[0], w_indexes[w_index])
-    w_index -= 1
-    
-    return path_float_segment(fixed_source, wildcard, w_indexes, w_index)
 
 def copy(fixed_source:Path, fixed_dest:Path, wildcard:str, w_indexes:list):
-    w_index = path_float_segment(fixed_source, wildcard, w_indexes, -1)
+    w_index = path_float_segment(fixed_source, wildcard, w_indexes)
+    
     glob = [*fixed_source.glob(wildcard)]
-    for index, directory in enumerate(glob):
-        f = Path(fixed_dest / directory.parts[w_indexes[w_index]])
-        j = len(directory.parts) - 1
-        if j != w_indexes[w_index]:
-            f = Path(fixed_dest / directory.parts[w_indexes[w_index]]) / directory.name
-        
-        print(f"{index}: {directory}    --->    {f}")
+    dest = fixed_dest
+
+    for index, match in enumerate(glob):
+        if len(match.parts) - 1 == w_indexes[w_index]:
+            dest = fixed_dest / match.parts[w_indexes[w_index]]
+        last_part = len(match.parts) - 1
+        if last_part != w_indexes[w_index]:
+            dest = Path(fixed_dest / match.parts[w_indexes[w_index]]) / match.name
+        print(f"{index}: {match}    --->    {dest}")
 
 def main():
 
     if is_filtered(source):
         wildcard_indexes = find_wildcard_indexes(source)
+        # if wildcard_indexes > 2:
         const_path = costant_path(source, wildcard_indexes[0])
         last = wildcard_indexes[-1] + 1
 
